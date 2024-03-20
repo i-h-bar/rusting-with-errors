@@ -39,40 +39,27 @@ impl Public {
         }
 
 
-
         Public { modulo: secret.modulo, key, add, max_fuzz, dim }
     }
 
     pub fn encrypt(&self, message: &String) -> Vec<i64> {
-        let encoded = self.encode(&message);
-        let len = encoded.len();
+        let len = message.len();
         let dim = self.dim + 1;
         let mut encrypted: Vec<i64> = vec![0; dim * len];
         let max_vectors = self.add / (self.max_fuzz * 2);
         let mut rng: OsRng = OsRng::default();
 
-        for i in 0..encoded.len() {
-            {
-                for _ in 0..rng.gen_range(2..max_vectors) {
-                    for (j, num) in self.key[rng.gen_range(0..self.key.len())].iter().enumerate() {
-                        encrypted[(i * dim) + j] += num;
-                    }
+        for (i, chr) in message.chars().into_iter().enumerate() {
+            let chr_num = (chr as i64) * self.add;
+            for _ in 0..rng.gen_range(2..max_vectors) {
+                for (j, num) in self.key[rng.gen_range(0..self.key.len())].iter().enumerate() {
+                    encrypted[(i * dim) + j] += num;
                 }
-                encrypted[(i * dim) + dim - 1] = modulus(encrypted[(i * dim) + dim - 1] + encoded[i], self.modulo)
             }
+            encrypted[(i * dim) + self.dim] = modulus(encrypted[(i * dim) + self.dim] + chr_num, self.modulo)
         }
 
         encrypted
-    }
-
-    fn encode(&self, message: &String) -> Vec<i64> {
-        let mut vec: Vec<i64> = Vec::new();
-
-        for chr in message.chars().into_iter() {
-            vec.push((chr as i64) * self.add);
-        }
-
-        vec
     }
 }
 
@@ -124,20 +111,5 @@ mod tests {
             let range = (actual_answer - fuzz)..(actual_answer + fuzz);
             assert!(range.contains(&answer))
         }
-    }
-
-    #[test]
-    fn test_encode() {
-        let secret = Secret::new(8);
-        let public = Public::from(&secret);
-
-        let message = "Hello World!".to_string();
-        let encoded = public.encode(&message);
-
-        let mut expected = vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33];
-        for num in expected.iter_mut() {
-            *num *= secret.add;
-        }
-        assert_eq!(encoded, expected);
     }
 }
