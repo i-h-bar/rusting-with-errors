@@ -1,5 +1,4 @@
 use rand::{Rng, rngs::OsRng};
-use rayon::prelude::*;
 
 use crate::keys::{modulus, secret::Secret};
 
