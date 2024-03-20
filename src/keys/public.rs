@@ -47,22 +47,22 @@ impl Public {
         let encoded = self.encode(&message);
         let len = encoded.len();
         let dim = self.dim + 1;
-        let mut encrypted: Vec<Vec<i64>> = vec![vec![0; dim]; len];
+        let mut encrypted: Vec<i64> = vec![0; dim * len];
         let max_vectors = self.add / (self.max_fuzz * 2);
+        let mut rng: OsRng = OsRng::default();
 
-        encrypted.par_iter_mut().enumerate().for_each(|(i, equation)|
+        for i in 0..encoded.len() {
             {
-                let mut rng: OsRng = OsRng::default();
                 for _ in 0..rng.gen_range(2..max_vectors) {
                     for (j, num) in self.key[rng.gen_range(0..self.key.len())].iter().enumerate() {
-                        equation[j] += num;
+                        encrypted[(i * dim) + j] += num;
                     }
                 }
-                equation[self.dim] = modulus(equation[self.dim] + encoded[i], self.modulo)
+                encrypted[(i * dim) + dim - 1] = modulus(encrypted[(i * dim) + dim - 1] + encoded[i], self.modulo)
             }
-        );
+        }
 
-        encrypted.into_iter().flatten().collect()
+        encrypted
     }
 
     fn encode(&self, message: &String) -> Vec<i64> {
