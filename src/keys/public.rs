@@ -4,10 +4,10 @@ use crate::keys::{modulus, secret::Secret};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Public {
-    modulo: i64,
-    key: Vec<Vec<i64>>,
-    add: i64,
-    max_fuzz: i64,
+    modulo: i32,
+    key: Vec<Vec<i32>>,
+    add: i32,
+    max_fuzz: i32,
     dim: usize,
 }
 
@@ -18,19 +18,19 @@ impl Public {
         let dim = secret.key.len();
         let len = dim * 10;
         let add = secret.add;
-        let mut key: Vec<Vec<i64>> = vec![vec![0; dim + 1]; len];
+        let mut key: Vec<Vec<i32>> = vec![vec![0; dim + 1]; len];
         let max_fuzz = add / 10;
         let neg_fuzz = -1 * max_fuzz;
 
         for i in 0..len {
             for j in 0..dim {
-                key[i][j] = rng.gen_range(-32768..32768);
+                key[i][j] = rng.gen_range(-4096..4096);
             }
         }
 
         for i in 0..len {
             let equation = &mut key[i];
-            let mut answer: i64 = 0;
+            let mut answer: i32 = 0;
             for j in 0..dim {
                 answer += equation[j] * secret.key[j];
             }
@@ -41,16 +41,14 @@ impl Public {
         Public { modulo: secret.modulo, key, add, max_fuzz, dim }
     }
 
-    pub fn encrypt(&self, message: &String) -> Vec<i64> {
-        let len = message.len();
+    pub fn encrypt(&self, message: &String) -> Vec<i32> {
         let dim = self.dim + 1;
-        let mut encrypted: Vec<i64> = vec![0; dim * len];
-        let max_vectors = self.add / (self.max_fuzz * 2);
+        let mut encrypted: Vec<i32> = Vec::new();
         let mut rng: OsRng = OsRng::default();
 
         for (i, chr) in message.chars().into_iter().enumerate() {
-            let chr_num = (chr as i64) * self.add;
-            for _ in 0..rng.gen_range(2..max_vectors) {
+            let chr_num = (chr as i32) * self.add;
+            for _ in 0..rng.gen_range(2..3) {
                 for (j, num) in self.key[rng.gen_range(0..self.key.len())].iter().enumerate() {
                     encrypted[(i * dim) + j] += num;
                 }
