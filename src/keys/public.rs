@@ -43,7 +43,8 @@ impl Public {
 
     pub fn encrypt(&self, message: &String) -> Vec<i32> {
         let dim = self.dim + 1;
-        let mut encrypted: Vec<i32> = Vec::new();
+        let len = message.chars().count();
+        let mut encrypted: Vec<i32> = vec![0; dim * len];
         let mut rng: OsRng = OsRng::default();
 
         for (i, chr) in message.chars().into_iter().enumerate() {
