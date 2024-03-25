@@ -1,10 +1,10 @@
 use std::char::from_u32;
 use std::fmt::{Display, Formatter};
 
-use rand::{Rng, rngs::OsRng};
+use rand::{rngs::OsRng, Rng};
 use rayon::prelude::*;
 
-use crate::keys::{MAX_CHR, modulus};
+use crate::keys::{modulus, MAX_CHR};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Secret {
@@ -12,7 +12,6 @@ pub struct Secret {
     pub(crate) modulo: i32,
     pub(crate) add: i32,
 }
-
 
 impl Secret {
     pub fn new(dim: usize) -> Self {
@@ -33,20 +32,23 @@ impl Secret {
         let mut answers: Vec<u32> = vec![0; len];
         let mut decrypted = String::with_capacity(len);
 
-        answers.par_iter_mut().enumerate().for_each(|(i, expected)|
-            {
-                let chr_answer: i32 = self.key.iter()
+        answers
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(i, expected)| {
+                let chr_answer: i32 = self
+                    .key
+                    .iter()
                     .enumerate()
-                    .map(
-                        |(j, num)| num * message[(i * dim) + j]
-                    )
+                    .map(|(j, num)| num * message[(i * dim) + j])
                     .sum();
 
                 *expected = (
-                    modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32 / self.add as f32
-                ).round() as u32;
-            }
-        );
+                    modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32
+                            / self.add as f32
+                )
+                    .round() as u32;
+            });
 
         for answer in answers {
             decrypted.push(from_u32(answer).unwrap_or_else(|| '💩'));
@@ -56,24 +58,24 @@ impl Secret {
     }
 }
 
-
 impl Display for Secret {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         if self.key.len() > 10 {
             let key = &self.key[..10];
             let output = format!("Secret {{ {:?}... }}", key)
-                .replace("[", "").replace("]", "");
+                .replace("[", "")
+                .replace("]", "");
 
             write!(f, "{}", output)
         } else {
             let output = format!("Secret {{ {:?} }}", self.key)
-                .replace("[", "").replace("]", "");
+                .replace("[", "")
+                .replace("]", "");
 
             write!(f, "{}", output)
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
