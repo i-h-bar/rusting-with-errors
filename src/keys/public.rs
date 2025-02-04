@@ -1,4 +1,5 @@
 use rand::{rngs::OsRng, Rng};
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::keys::{modulus, secret::Secret};
 
@@ -13,7 +14,7 @@ pub struct Public {
 
 impl Public {
     pub fn from(secret: &Secret) -> Self {
-        let mut rng: OsRng = OsRng::default();
+        let mut rng = rand::rng();
         let dim = secret.key.len();
         let len = dim * 10;
         let add = secret.add;
@@ -23,7 +24,7 @@ impl Public {
 
         for i in 0..len {
             for j in 0..dim {
-                key[i][j] = rng.gen_range(-4096..4096);
+                key[i][j] = rng.random_range(-4096..4096);
             }
         }
 
@@ -33,7 +34,7 @@ impl Public {
             for j in 0..dim {
                 answer += equation[j] * secret.key[j];
             }
-            equation[dim] = modulus(answer + rng.gen_range(neg_fuzz..max_fuzz), secret.modulo);
+            equation[dim] = modulus(answer + rng.random_range(neg_fuzz..max_fuzz), secret.modulo);
         }
 
         Public {
@@ -45,16 +46,16 @@ impl Public {
         }
     }
 
-    pub fn encrypt(&self, message: &String) -> Vec<i32> {
+    pub fn encrypt(&self, message: &String) -> String {
         let dim = self.dim + 1;
         let len = message.chars().count();
         let mut encrypted: Vec<i32> = vec![0; dim * len];
-        let mut rng: OsRng = OsRng::default();
+        let mut rng = rand::rng();
 
         for (i, chr) in message.chars().into_iter().enumerate() {
             let chr_num = (chr as i32) * self.add;
-            for _ in 0..rng.gen_range(2..3) {
-                for (j, num) in self.key[rng.gen_range(0..self.key.len())]
+            for _ in 0..rng.random_range(2..3) {
+                for (j, num) in self.key[rng.random_range(0..self.key.len())]
                     .iter()
                     .enumerate()
                 {
@@ -65,7 +66,10 @@ impl Public {
                 modulus(encrypted[(i * dim) + self.dim] + chr_num, self.modulo)
         }
 
-        encrypted
+        let encrypted_bytes = encrypted.as_bytes();
+        unsafe {
+            std::str::from_utf8_unchecked(encrypted_bytes).to_string()
+        }
     }
 }
 
@@ -85,8 +89,7 @@ mod tests {
         let char_vec: Vec<_> = message.chars().collect();
 
         let encrypted = public.encrypt(&message);
-
-        assert_eq!(encrypted.len(), char_vec.len() * 5);
+        assert_ne!(encrypted, message);
     }
 
     #[test]

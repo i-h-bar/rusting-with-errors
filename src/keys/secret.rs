@@ -1,5 +1,6 @@
 use std::char::from_u32;
 use std::fmt::{Display, Formatter};
+use zerocopy::FromBytes;
 
 use rand::{rngs::OsRng, Rng};
 use rayon::prelude::*;
@@ -15,18 +16,19 @@ pub struct Secret {
 
 impl Secret {
     pub fn new(dim: usize) -> Self {
-        let mut rng: OsRng = OsRng::default();
+        let mut rng = rand::rng();
         let mut key: Vec<i32> = vec![0; dim];
-        let modulo = rng.gen_range(111206400..1112064000);
+        let modulo = rng.random_range(111206400..1112064000);
         let add: i32 = modulo / MAX_CHR;
         for i in 0..dim {
-            key[i] = rng.gen_range(-4096..4096);
+            key[i] = rng.random_range(-4096..4096);
         }
 
         Secret { key, modulo, add }
     }
 
-    pub fn decrypt(&self, message: &Vec<i32>) -> String {
+    pub fn decrypt(&self, message: &str) -> String {
+        let message: &[i32] = FromBytes::ref_from_bytes(message.as_bytes()).unwrap();
         let dim = self.key.len() + 1;
         let len = message.len() / dim;
         let mut answers: Vec<u32> = vec![0; len];
