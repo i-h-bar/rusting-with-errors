@@ -1,5 +1,5 @@
-use rand::{rngs::OsRng, Rng};
-use zerocopy::{FromBytes, Immutable, IntoBytes};
+use rand::Rng;
+use zerocopy::IntoBytes;
 
 use crate::keys::{modulus, secret::Secret};
 
@@ -67,9 +67,7 @@ impl Public {
         }
 
         let encrypted_bytes = encrypted.as_bytes();
-        unsafe {
-            std::str::from_utf8_unchecked(encrypted_bytes).to_string()
-        }
+        unsafe { std::str::from_utf8_unchecked(encrypted_bytes).to_string() }
     }
 }
 
@@ -86,9 +84,8 @@ mod tests {
         let public: Public = serde_json::from_str(&PUBLIC).expect("Invalid public key str");
 
         let message = "Hello World!".to_string();
-        let char_vec: Vec<_> = message.chars().collect();
-
         let encrypted = public.encrypt(&message);
+
         assert_ne!(encrypted, message);
     }
 

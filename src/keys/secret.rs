@@ -2,7 +2,7 @@ use std::char::from_u32;
 use std::fmt::{Display, Formatter};
 use zerocopy::FromBytes;
 
-use rand::{rngs::OsRng, Rng};
+use rand::Rng;
 use rayon::prelude::*;
 
 use crate::keys::{modulus, MAX_CHR};
@@ -45,10 +45,8 @@ impl Secret {
                     .map(|(j, num)| num * message[(i * dim) + j])
                     .sum();
 
-                *expected = (
-                    modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32
-                            / self.add as f32
-                )
+                *expected = (modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32
+                    / self.add as f32)
                     .round() as u32;
             });
 
