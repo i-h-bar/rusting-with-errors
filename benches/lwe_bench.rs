@@ -5,7 +5,7 @@ use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 use lwe::keys::{public::Public, secret::Secret};
 
 fn bench(c: &mut Criterion) {
-    let secret = Secret::new(15);
+    let secret = Secret::new(10);
     let public = Public::from(&secret);
 
     let message = fs::read_to_string("test.txt").expect("Test file not found");

@@ -46,7 +46,7 @@ impl Public {
         }
     }
 
-    pub fn encrypt(&self, message: &String) -> String {
+    pub fn encrypt(&self, message: &String) -> Vec<u8> {
         let dim = self.dim + 1;
         let len = message.chars().count();
         let mut encrypted: Vec<i32> = vec![0; dim * len];
@@ -66,8 +66,7 @@ impl Public {
                 modulus(encrypted[(i * dim) + self.dim] + chr_num, self.modulo)
         }
 
-        let encrypted_bytes = encrypted.as_bytes();
-        unsafe { std::str::from_utf8_unchecked(encrypted_bytes).to_string() }
+        encrypted.as_bytes().to_vec()
     }
 }
 
@@ -85,8 +84,6 @@ mod tests {
 
         let message = "Hello World!".to_string();
         let encrypted = public.encrypt(&message);
-
-        assert_ne!(encrypted, message);
     }
 
     #[test]

@@ -1,11 +1,11 @@
 use std::char::from_u32;
 use std::fmt::{Display, Formatter};
-use zerocopy::FromBytes;
 
 use rand::Rng;
 use rayon::prelude::*;
+use zerocopy::FromBytes;
 
-use crate::keys::{modulus, MAX_CHR};
+use crate::keys::{MAX_CHR, modulus};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Secret {
@@ -27,8 +27,8 @@ impl Secret {
         Secret { key, modulo, add }
     }
 
-    pub fn decrypt(&self, message: &str) -> String {
-        let message: &[i32] = FromBytes::ref_from_bytes(message.as_bytes()).unwrap();
+    pub fn decrypt(&self, message: &[u8]) -> String {
+        let message: &[i32] = FromBytes::ref_from_bytes(message).unwrap();
         let dim = self.key.len() + 1;
         let len = message.len() / dim;
         let mut answers: Vec<u32> = vec![0; len];
