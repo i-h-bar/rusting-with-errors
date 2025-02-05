@@ -5,12 +5,12 @@ mod tests {
     use super::*;
     #[test]
     fn test_secret_pub() {
-        let _ = keys::secret::Secret::new(4);
+        let _ = keys::secret::Secret16::new();
     }
 
     #[test]
     fn test_public_pub() {
-        let secret = keys::secret::Secret::new(64);
-        let _ = keys::public::Public::from(&secret);
+        let secret = keys::secret::Secret16::new();
+        let _ = secret.generate_public_key();
     }
 }

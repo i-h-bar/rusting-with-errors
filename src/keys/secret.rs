@@ -3,28 +3,56 @@ use std::fmt::{Display, Formatter};
 
 use rand::Rng;
 use rayon::prelude::*;
-use zerocopy::FromBytes;
+use zerocopy::{FromBytes, IntoBytes, Immutable};
 
 use crate::keys::{MAX_CHR, modulus};
+use crate::keys::public::Public;
 
-#[derive(serde::Deserialize, serde::Serialize)]
-pub struct Secret {
-    pub(crate) key: Vec<i32>,
+#[derive(serde::Deserialize, serde::Serialize, IntoBytes, FromBytes, Immutable)]
+pub struct Secret16 {
+    pub(crate) key: [i32; 16],
     pub(crate) modulo: i32,
     pub(crate) add: i32,
 }
 
-impl Secret {
-    pub fn new(dim: usize) -> Self {
+impl Secret16 {
+    pub fn new() -> Self {
         let mut rng = rand::rng();
-        let mut key: Vec<i32> = vec![0; dim];
-        let modulo = rng.random_range(111206400..1112064000);
+        let mut key = [0; 16];
+        let modulo = rng.random_range(11120640..111206400);
         let add: i32 = modulo / MAX_CHR;
-        for i in 0..dim {
+        for i in 0..16 {
             key[i] = rng.random_range(-4096..4096);
         }
 
-        Secret { key, modulo, add }
+        Secret16 { key, modulo, add }
+    }
+
+    pub fn generate_public_key(&self) -> Public {
+        let mut rng = rand::rng();
+        let dim = self.key.len();
+        let len = dim * 10;
+        let add = self.add;
+        let mut key: Vec<Vec<i32>> = vec![vec![0; dim + 1]; len];
+        let max_fuzz = add / 10;
+        let neg_fuzz = -1 * max_fuzz;
+
+        for i in 0..len {
+            for j in 0..dim {
+                key[i][j] = rng.random_range(-4096..4096);
+            }
+        }
+
+        for i in 0..len {
+            let equation = &mut key[i];
+            let mut answer: i32 = 0;
+            for j in 0..dim {
+                answer += equation[j] * self.key[j];
+            }
+            equation[dim] = modulus(answer + rng.random_range(neg_fuzz..max_fuzz), self.modulo);
+        }
+
+        Public::new(self.modulo, key, add, max_fuzz, dim,)
     }
 
     pub fn decrypt(&self, message: &[u8]) -> String {
@@ -58,7 +86,7 @@ impl Secret {
     }
 }
 
-impl Display for Secret {
+impl Display for Secret16 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         if self.key.len() > 10 {
             let key = &self.key[..10];
@@ -85,8 +113,8 @@ mod tests {
 
     #[test]
     fn test_decryption() {
-        let secret = Secret::new(64);
-        let public = Public::from(&secret);
+        let secret = Secret16::new();
+        let public = secret.generate_public_key();
 
         let message = "Hello World".to_string();
 
@@ -98,8 +126,8 @@ mod tests {
 
     #[test]
     fn test_decryption_utf8() {
-        let secret = Secret::new(64);
-        let public = Public::from(&secret);
+        let secret = Secret16::new();
+        let public = secret.generate_public_key();
 
         let message = "こんにちは世界".to_string();
 
@@ -111,10 +139,10 @@ mod tests {
 
     #[test]
     fn secret_creation() {
-        let secret = Secret::new(64);
-        assert_eq!(secret.key.len(), 64);
+        let secret = Secret16::new();
+        assert_eq!(secret.key.len(), 16);
 
-        let mod_range = 111206400..1112064000;
+        let mod_range = 11120640..111206400;
         assert!(mod_range.contains(&secret.modulo));
 
         let key_range = -32768..32768;
