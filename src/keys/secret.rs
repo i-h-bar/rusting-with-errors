@@ -3,16 +3,17 @@ use std::fmt::{Display, Formatter};
 
 use rand::Rng;
 use rayon::prelude::*;
-use zerocopy::{FromBytes, IntoBytes, Immutable};
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
-use crate::keys::{MAX_CHR, modulus};
 use crate::keys::public::Public;
+use crate::keys::{modulus, MAX_CHR};
 
-#[derive(serde::Deserialize, serde::Serialize, IntoBytes, FromBytes, Immutable)]
+#[derive(IntoBytes, FromBytes, Immutable)]
 pub struct Secret16 {
     pub(crate) key: [i32; 16],
     pub(crate) modulo: i32,
     pub(crate) add: i32,
+    pub(crate) dim: i32,
 }
 
 impl Secret16 {
@@ -25,34 +26,38 @@ impl Secret16 {
             key[i] = rng.random_range(-4096..4096);
         }
 
-        Secret16 { key, modulo, add }
+        Secret16 {
+            key,
+            modulo,
+            add,
+            dim: 16,
+        }
     }
 
     pub fn generate_public_key(&self) -> Public {
         let mut rng = rand::rng();
-        let dim = self.key.len();
-        let len = dim * 10;
         let add = self.add;
-        let mut key: Vec<Vec<i32>> = vec![vec![0; dim + 1]; len];
+        let mut key: [i32; 2890] = [0; 2890];
         let max_fuzz = add / 10;
         let neg_fuzz = -1 * max_fuzz;
 
-        for i in 0..len {
-            for j in 0..dim {
-                key[i][j] = rng.random_range(-4096..4096);
+        for i in 0..170 {
+            for j in 0..17usize {
+                key[(i * 17) + j] = rng.random_range(-4096..4096);
             }
         }
 
-        for i in 0..len {
-            let equation = &mut key[i];
+        for i in 0..170 {
+            let equation = &mut key[i * 17..(i * 17) + 17];
             let mut answer: i32 = 0;
-            for j in 0..dim {
+            for j in 0..self.dim as usize {
                 answer += equation[j] * self.key[j];
             }
-            equation[dim] = modulus(answer + rng.random_range(neg_fuzz..max_fuzz), self.modulo);
+            equation[self.dim as usize] =
+                modulus(answer + rng.random_range(neg_fuzz..max_fuzz), self.modulo);
         }
 
-        Public::new(self.modulo, key, add, max_fuzz, dim,)
+        Public::new(self.modulo, key, add, self.dim)
     }
 
     pub fn decrypt(&self, message: &[u8]) -> String {
@@ -107,8 +112,6 @@ impl Display for Secret16 {
 
 #[cfg(test)]
 mod tests {
-    use crate::keys::public::Public;
-
     use super::*;
 
     #[test]

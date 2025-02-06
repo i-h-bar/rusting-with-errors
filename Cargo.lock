@@ -260,8 +260,6 @@ dependencies = [
  "criterion",
  "rand",
  "rayon",
- "serde",
- "serde_json",
  "zerocopy",
 ]
 

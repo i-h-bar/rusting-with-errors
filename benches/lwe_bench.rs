@@ -2,11 +2,11 @@ use std::fs;
 
 use criterion::{criterion_group, criterion_main, Bencher, Criterion};
 
-use lwe::keys::{public::Public, secret::Secret};
+use lwe::keys::secret::Secret16;
 
 fn bench(c: &mut Criterion) {
-    let secret = Secret::new(10);
-    let public = Public::from(&secret);
+    let secret = Secret16::new();
+    let public = secret.generate_public_key();
 
     let message = fs::read_to_string("test.txt").expect("Test file not found");
 
