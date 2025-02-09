@@ -62,13 +62,12 @@ impl Secret16 {
         let message: &[i32] = FromBytes::ref_from_bytes(message)?;
         let dim = self.key.len() + 1;
         let len = message.len() / dim;
-        let mut answers: Vec<u32> = vec![0; len];
         let add = self.add as f32;
 
-        answers
-            .par_iter_mut()
+        Ok((0..len)
+            .into_par_iter()
             .zip(message.par_chunks(dim))
-            .for_each(|(chr, message_chunk)| {
+            .map(|(_, message_chunk)| {
                 let chr_answer: i32 = self
                     .key
                     .iter()
@@ -78,15 +77,10 @@ impl Secret16 {
 
                 // Chunk should have size otherwise would have failed earlier
                 let last = message_chunk.last().unwrap_or_else(|| &0);
-                *chr = (modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32;
-            });
-
-        Ok(
-            answers
-                .into_par_iter()
-                .map(| answer | from_u32(answer).unwrap_or_else(|| '💩'))
-                .collect::<String>()
-        )
+                from_u32((modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32)
+                    .unwrap_or_else(|| '💩')
+            })
+            .collect())
     }
 }
 
