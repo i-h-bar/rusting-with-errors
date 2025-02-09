@@ -13,5 +13,5 @@ fn main() {
 
     let decrypted = secret.decrypt(&encrypted);
 
-    println!("{decrypted}")
+    println!("{}", decrypted.unwrap());
 }

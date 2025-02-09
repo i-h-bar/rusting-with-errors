@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 
 use rand::Rng;
 use rayon::prelude::*;
-use zerocopy::{FromBytes, Immutable, IntoBytes};
+use zerocopy::{CastError, FromBytes, Immutable, IntoBytes};
 
 use crate::keys::public::Public;
 use crate::keys::{modulus, MAX_CHR};
@@ -58,8 +58,8 @@ impl Secret16 {
         Public::new(self.modulo, key, add, self.dim)
     }
 
-    pub fn decrypt(&self, message: &[u8]) -> String {
-        let message: &[i32] = FromBytes::ref_from_bytes(message).unwrap();
+    pub fn decrypt<'a>(&self, message: &'a [u8]) -> Result<String, CastError<&'a [u8], [i32]>> {
+        let message: &[i32] = FromBytes::ref_from_bytes(message)?;
         let dim = self.key.len() + 1;
         let len = message.len() / dim;
         let mut answers: Vec<u32> = vec![0; len];
@@ -86,7 +86,7 @@ impl Secret16 {
             decrypted.push(from_u32(answer).unwrap_or_else(|| '💩'));
         }
 
-        decrypted
+        Ok(decrypted)
     }
 }
 
@@ -121,7 +121,7 @@ mod tests {
         let message = "Hello World".to_string();
 
         let encrypted = public.encrypt(&message);
-        let decrypted = secret.decrypt(&encrypted);
+        let decrypted = secret.decrypt(&encrypted).unwrap();
 
         assert_eq!(decrypted, message);
     }
@@ -134,7 +134,7 @@ mod tests {
         let message = "こんにちは世界".to_string();
 
         let encrypted = public.encrypt(&message);
-        let decrypted = secret.decrypt(&encrypted);
+        let decrypted = secret.decrypt(&encrypted).unwrap();
 
         assert_eq!(decrypted, message);
     }
