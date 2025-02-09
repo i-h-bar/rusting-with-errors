@@ -1,4 +1,5 @@
 use rand::Rng;
+use rayon::prelude::ParallelSliceMut;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::keys::modulus;
@@ -23,9 +24,16 @@ impl Public {
 
     pub fn encrypt(&self, message: &String) -> Vec<u8> {
         let dim = (self.dim + 1) as usize;
-        let len = message.chars().count();
+        let message_chars: Vec<char> = message.chars().collect();
+        let len = message_chars.len();
         let mut encrypted: Vec<i32> = vec![0; dim * len];
         let mut rng = rand::rng();
+
+        encrypted.par_chunks_mut(dim).enumerate().for_each(| (i, chunk) | {
+            let mut rng = rand::rng();
+            let char_num = (message_chars[i] as i32) * self.add;
+
+        });
 
         for (i, chr) in message.chars().into_iter().enumerate() {
             let chr_num = (chr as i32) * self.add;
