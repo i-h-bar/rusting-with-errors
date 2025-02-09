@@ -60,14 +60,11 @@ impl Secret16 {
 
     pub fn decrypt<'a>(&self, message: &'a [u8]) -> Result<String, CastError<&'a [u8], [i32]>> {
         let message: &[i32] = FromBytes::ref_from_bytes(message)?;
-        let dim = self.key.len() + 1;
-        let len = message.len() / dim;
         let add = self.add as f32;
 
-        Ok((0..len)
-            .into_par_iter()
-            .zip(message.par_chunks(dim))
-            .map(|(_, message_chunk)| {
+        Ok(message
+            .par_chunks(self.key.len() + 1)
+            .map(|message_chunk| {
                 let chr_answer: i32 = self
                     .key
                     .iter()
