@@ -3,10 +3,10 @@ use std::fmt::{Display, Formatter};
 
 use rand::Rng;
 use rayon::prelude::*;
-use zerocopy::{CastError, FromBytes, Immutable, IntoBytes};
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::keys::public::Public;
-use crate::keys::{modulus, MAX_CHR};
+use crate::keys::{modulus, DecryptError, DecryptResult, MAX_CHR};
 
 #[derive(IntoBytes, FromBytes, Immutable)]
 pub struct Secret16 {
@@ -58,8 +58,8 @@ impl Secret16 {
         Public::new(self.modulo, key, add, self.dim)
     }
 
-    pub fn decrypt<'a>(&self, message: &'a [u8]) -> Result<String, CastError<&'a [u8], [i32]>> {
-        let message: &[i32] = FromBytes::ref_from_bytes(message)?;
+    pub fn decrypt(&self, message: &[u8]) -> DecryptResult<String> {
+        let message: &[i32] = FromBytes::ref_from_bytes(message).map_err(|_| DecryptError::ByteParseError)?;
         let add = self.add as f32;
 
         Ok(message
@@ -73,11 +73,11 @@ impl Secret16 {
                     .sum();
 
                 // Chunk should have size otherwise would have failed earlier
-                let last = message_chunk.last().unwrap_or_else(|| &0);
-                from_u32((modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32)
-                    .unwrap_or_else(|| '💩')
+                let last = message_chunk.last().ok_or(DecryptError::VectorError)?;
+                Ok(from_u32((modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32)
+                       .ok_or(DecryptError::VectorError)?)
             })
-            .collect())
+            .collect::<Result<String, DecryptError>>()?)
     }
 }
 
