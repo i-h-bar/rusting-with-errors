@@ -65,6 +65,10 @@ impl Secret16 {
     }
 
     pub fn decrypt(&self, message: &[u8]) -> Result<String, DecryptError> {
+        if message.is_empty() {
+            return Ok(String::new());
+        }
+
         let message: &[i32] = FromBytes::ref_from_bytes(message).map_err(|_| ByteParseError)?;
         let add = self.add as f32;
 
@@ -140,5 +144,13 @@ mod tests {
         for num in secret.key.iter() {
             assert!(key_range.contains(num));
         }
+    }
+
+    #[test]
+    fn decrypt_empty_message() {
+        let secret = Secret16::new();
+        let encrypted: [u8; 0] = [];
+        let decrypted = secret.decrypt(&encrypted).unwrap();
+        assert_eq!(decrypted, String::new());
     }
 }

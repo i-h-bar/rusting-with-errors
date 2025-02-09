@@ -12,21 +12,21 @@ fn bench(c: &mut Criterion) {
 
     let encrypted = public.encrypt(&message);
 
-    c.bench_function("Secret Creation", |b: &mut Bencher| {
-        b.iter(|| Secret16::new())
-    });
-
-    c.bench_function("Pub Creation", |b: &mut Bencher| {
-        b.iter(|| secret.generate_public_key())
-    });
+    // c.bench_function("Secret Creation", |b: &mut Bencher| {
+    //     b.iter(|| Secret16::new())
+    // });
+    //
+    // c.bench_function("Pub Creation", |b: &mut Bencher| {
+    //     b.iter(|| secret.generate_public_key())
+    // });
 
     // c.bench_function("Encryption", |b: &mut Bencher| {
     //     b.iter(|| public.encrypt(&message))
     // });
-    //
-    // c.bench_function("Decryption", |b: &mut Bencher| {
-    //     b.iter(|| secret.decrypt(&encrypted))
-    // });
+
+    c.bench_function("Decryption", |b: &mut Bencher| {
+        b.iter(|| secret.decrypt(&encrypted))
+    });
 }
 
 criterion_group! {
