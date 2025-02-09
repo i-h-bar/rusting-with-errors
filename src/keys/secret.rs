@@ -41,10 +41,8 @@ impl Secret16 {
         let max_fuzz = add / 10;
         let neg_fuzz = -1 * max_fuzz;
 
-        for i in 0..170 {
-            for j in 0..17usize {
-                key[(i * 17) + j] = rng.random_range(-4096..4096);
-            }
+        for i in 0..key.len() {
+            key[i] = rng.random_range(-4096..4096);
         }
 
         for i in 0..170 {
@@ -66,6 +64,7 @@ impl Secret16 {
         let len = message.len() / dim;
         let mut answers: Vec<u32> = vec![0; len];
         let mut decrypted = String::with_capacity(len);
+        let add = self.add as f32;
 
         answers
             .par_iter_mut()
@@ -79,7 +78,7 @@ impl Secret16 {
                     .sum();
 
                 *expected = (modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32
-                    / self.add as f32)
+                    / add)
                     .round() as u32;
             });
 

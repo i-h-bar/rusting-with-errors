@@ -1,4 +1,5 @@
 use rand::Rng;
+use rayon::prelude::*;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::keys::modulus;
@@ -23,22 +24,30 @@ impl Public {
 
     pub fn encrypt(&self, message: &String) -> Vec<u8> {
         let dim = (self.dim + 1) as usize;
-        let len = message.chars().count();
+        let pub_key_size = (self.dim * 10) as usize;
+        let message_chars: Vec<char> = message.chars().collect();
+        let len = message_chars.len();
         let mut encrypted: Vec<i32> = vec![0; dim * len];
-        let mut rng = rand::rng();
 
-        for (i, chr) in message.chars().into_iter().enumerate() {
-            let chr_num = (chr as i32) * self.add;
-            for _ in 0..rng.random_range(2..3) {
-                let num = rng.random_range(0..self.dim * 10) as usize;
-                let slice = (num * dim)..(num * dim) + dim;
-                for (j, num) in self.key[slice].iter().enumerate() {
-                    encrypted[(i * dim) + j] += num;
+        encrypted
+            .par_chunks_mut(dim)
+            .zip(&message_chars)
+            .for_each(|(chunk, &chr)| {
+                let mut rng = rand::rng();
+                let char_num = (chr as i32) * self.add;
+                for _ in 0..rng.random_range(2..5) {
+                    let num = rng.random_range(0..pub_key_size);
+                    let slice = (num * dim)..(num * dim) + dim;
+                    for (key_num, chunk_num) in self.key[slice].iter().zip(&mut *chunk) {
+                        *chunk_num += key_num;
+                    }
                 }
-            }
-            encrypted[(i * dim) + dim - 1] =
-                modulus(encrypted[(i * dim) + dim - 1] + chr_num, self.modulo)
-        }
+
+                *chunk.last_mut().expect("encrypted buffer is empty") = modulus(
+                    chunk.last().expect("encrypted buffer is empty") + char_num,
+                    self.modulo,
+                );
+            });
 
         encrypted.as_bytes().to_vec()
     }
