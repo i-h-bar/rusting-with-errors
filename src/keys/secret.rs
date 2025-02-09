@@ -8,7 +8,7 @@ use zerocopy::{FromBytes, Immutable, IntoBytes};
 use crate::keys::public::Public;
 use crate::keys::{
     modulus,
-    DecryptError::{self, ByteParseError, U32ParseError, SliceAccessError},
+    DecryptError::{self, ByteParseError, SliceAccessError, U32ParseError},
     MAX_CHR,
 };
 
@@ -45,19 +45,21 @@ impl Secret16 {
         let max_fuzz = add / 10;
         let neg_fuzz = -1 * max_fuzz;
 
-        for i in 0..key.len() {
-            key[i] = rng.random_range(-4096..4096);
-        }
+        key.chunks_mut((self.dim + 1) as usize).for_each(|chunk| {
+            let answer: i32 = self
+                .key
+                .iter()
+                .zip(&mut *chunk)
+                .map(|(key_num, chunklet)| {
+                    let num = rng.random_range(-4096..4096);
+                    *chunklet = num;
+                    key_num * num
+                })
+                .sum();
 
-        for i in 0..170 {
-            let equation = &mut key[i * 17..(i * 17) + 17];
-            let mut answer: i32 = 0;
-            for j in 0..self.dim as usize {
-                answer += equation[j] * self.key[j];
-            }
-            equation[self.dim as usize] =
+            *chunk.last_mut().expect("Attempted `.last_mut()` on an empty chunk") =
                 modulus(answer + rng.random_range(neg_fuzz..max_fuzz), self.modulo);
-        }
+        });
 
         Public::new(self.modulo, key, add, self.dim)
     }
