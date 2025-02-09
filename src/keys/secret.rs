@@ -3,17 +3,17 @@ use std::fmt::{Display, Formatter};
 
 use rand::Rng;
 use rayon::prelude::*;
-use zerocopy::{FromBytes, Immutable, IntoBytes};
+use zerocopy::{CastError, FromBytes, Immutable, IntoBytes};
 
 use crate::keys::public::Public;
 use crate::keys::{modulus, MAX_CHR};
 
 #[derive(IntoBytes, FromBytes, Immutable)]
 pub struct Secret16 {
-    pub(crate) key: [i32; 16],
-    pub(crate) modulo: i32,
-    pub(crate) add: i32,
-    pub(crate) dim: i32,
+    key: [i32; 16],
+    modulo: i32,
+    add: i32,
+    dim: i32,
 }
 
 impl Secret16 {
@@ -58,54 +58,36 @@ impl Secret16 {
         Public::new(self.modulo, key, add, self.dim)
     }
 
-    pub fn decrypt(&self, message: &[u8]) -> String {
-        let message: &[i32] = FromBytes::ref_from_bytes(message).unwrap();
-        let dim = self.key.len() + 1;
-        let len = message.len() / dim;
-        let mut answers: Vec<u32> = vec![0; len];
-        let mut decrypted = String::with_capacity(len);
+    pub fn decrypt<'a>(&self, message: &'a [u8]) -> Result<String, CastError<&'a [u8], [i32]>> {
+        let message: &[i32] = FromBytes::ref_from_bytes(message)?;
         let add = self.add as f32;
 
-        answers
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(i, expected)| {
+        Ok(message
+            .par_chunks(self.key.len() + 1)
+            .map(|message_chunk| {
                 let chr_answer: i32 = self
                     .key
                     .iter()
-                    .enumerate()
-                    .map(|(j, num)| num * message[(i * dim) + j])
+                    .zip(message_chunk)
+                    .map(|(num, chunklet)| num * chunklet)
                     .sum();
 
-                *expected = (modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32
-                    / add)
-                    .round() as u32;
-            });
-
-        for answer in answers {
-            decrypted.push(from_u32(answer).unwrap_or_else(|| '💩'));
-        }
-
-        decrypted
+                // Chunk should have size otherwise would have failed earlier
+                let last = message_chunk.last().unwrap_or_else(|| &0);
+                from_u32((modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32)
+                    .unwrap_or_else(|| '💩')
+            })
+            .collect())
     }
 }
 
 impl Display for Secret16 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        if self.key.len() > 10 {
-            let key = &self.key[..10];
-            let output = format!("Secret {{ {:?}... }}", key)
-                .replace("[", "")
-                .replace("]", "");
+        let output = format!("Secret {{ {:?} }}", self.key)
+            .replace("[", "")
+            .replace("]", "");
 
-            write!(f, "{}", output)
-        } else {
-            let output = format!("Secret {{ {:?} }}", self.key)
-                .replace("[", "")
-                .replace("]", "");
-
-            write!(f, "{}", output)
-        }
+        write!(f, "{}", output)
     }
 }
 
@@ -121,7 +103,7 @@ mod tests {
         let message = "Hello World".to_string();
 
         let encrypted = public.encrypt(&message);
-        let decrypted = secret.decrypt(&encrypted);
+        let decrypted = secret.decrypt(&encrypted).unwrap();
 
         assert_eq!(decrypted, message);
     }
@@ -134,7 +116,7 @@ mod tests {
         let message = "こんにちは世界".to_string();
 
         let encrypted = public.encrypt(&message);
-        let decrypted = secret.decrypt(&encrypted);
+        let decrypted = secret.decrypt(&encrypted).unwrap();
 
         assert_eq!(decrypted, message);
     }
