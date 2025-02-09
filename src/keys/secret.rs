@@ -57,7 +57,9 @@ impl Secret16 {
                 })
                 .sum();
 
-            *chunk.last_mut().expect("Attempted `.last_mut()` on an empty chunk") =
+            *chunk
+                .last_mut()
+                .expect("Attempted `.last_mut()` on an empty chunk") =
                 modulus(answer + rng.random_range(neg_fuzz..max_fuzz), self.modulo);
         });
 
