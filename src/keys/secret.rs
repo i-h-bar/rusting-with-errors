@@ -10,10 +10,10 @@ use crate::keys::{modulus, MAX_CHR};
 
 #[derive(IntoBytes, FromBytes, Immutable)]
 pub struct Secret16 {
-    pub(crate) key: [i32; 16],
-    pub(crate) modulo: i32,
-    pub(crate) add: i32,
-    pub(crate) dim: i32,
+    key: [i32; 16],
+    modulo: i32,
+    add: i32,
+    dim: i32,
 }
 
 impl Secret16 {
