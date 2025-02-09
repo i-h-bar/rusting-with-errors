@@ -63,7 +63,6 @@ impl Secret16 {
         let dim = self.key.len() + 1;
         let len = message.len() / dim;
         let mut answers: Vec<u32> = vec![0; len];
-        let mut decrypted = String::with_capacity(len);
         let add = self.add as f32;
 
         answers
@@ -82,11 +81,12 @@ impl Secret16 {
                 *chr = (modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32;
             });
 
-        for answer in answers {
-            decrypted.push(from_u32(answer).unwrap_or_else(|| '💩'));
-        }
-
-        Ok(decrypted)
+        Ok(
+            answers
+                .into_par_iter()
+                .map(| answer | from_u32(answer).unwrap_or_else(|| '💩'))
+                .collect::<String>()
+        )
     }
 }
 
