@@ -26,21 +26,23 @@ impl Public {
         let dim = (self.dim + 1) as usize;
         let pub_key_size = (self.dim * 10) as usize;
         let message_chars: Vec<char> = message.chars().collect();
-        let len = message_chars.len();
-        let mut encrypted: Vec<i32> = vec![0; dim * len];
+        let mut encrypted: Vec<i32> = vec![0; dim * message_chars.len()];
 
         encrypted
             .par_chunks_mut(dim)
-            .zip(&message_chars)
-            .for_each(|(chunk, &chr)| {
+            .zip(message_chars)
+            .for_each(|(chunk, chr)| {
                 let mut rng = rand::rng();
                 let char_num = (chr as i32) * self.add;
                 for _ in 0..rng.random_range(2..5) {
                     let num = rng.random_range(0..pub_key_size);
                     let slice = (num * dim)..(num * dim) + dim;
-                    for (key_num, chunk_num) in self.key[slice].iter().zip(&mut *chunk) {
-                        *chunk_num += key_num;
-                    }
+                    self.key[slice]
+                        .iter()
+                        .zip(&mut *chunk)
+                        .for_each(|(key_num, chunk_num)| {
+                            *chunk_num += key_num;
+                        })
                 }
 
                 *chunk.last_mut().expect("encrypted buffer is empty") = modulus(
@@ -52,6 +54,3 @@ impl Public {
         encrypted.as_bytes().to_vec()
     }
 }
-
-#[cfg(test)]
-mod tests {}
