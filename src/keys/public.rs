@@ -22,7 +22,7 @@ impl Public {
         }
     }
 
-    pub fn encrypt(&self, message: &String) -> Vec<u8> {
+    pub fn encrypt(&self, message: &str) -> Vec<u8> {
         let dim = (self.dim + 1) as usize;
         let pub_key_size = (self.dim * 10) as usize;
         let message_chars: Vec<char> = message.chars().collect();
