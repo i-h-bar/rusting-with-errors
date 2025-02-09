@@ -68,18 +68,18 @@ impl Secret16 {
 
         answers
             .par_iter_mut()
-            .enumerate()
-            .for_each(|(i, expected)| {
+            .zip(message.par_chunks(dim))
+            .for_each(|(chr, message_chunk)| {
                 let chr_answer: i32 = self
                     .key
                     .iter()
-                    .enumerate()
-                    .map(|(j, num)| num * message[(i * dim) + j])
+                    .zip(message_chunk)
+                    .map(|(num, chunklet)| num * chunklet)
                     .sum();
 
-                *expected = (modulus(message[(i * dim) + dim - 1] - chr_answer, self.modulo) as f32
-                    / add)
-                    .round() as u32;
+                // Chunk should have size otherwise would have failed earlier
+                let last = message_chunk.last().unwrap_or_else(|| &0);
+                *chr = (modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32;
             });
 
         for answer in answers {
@@ -92,20 +92,11 @@ impl Secret16 {
 
 impl Display for Secret16 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        if self.key.len() > 10 {
-            let key = &self.key[..10];
-            let output = format!("Secret {{ {:?}... }}", key)
-                .replace("[", "")
-                .replace("]", "");
+        let output = format!("Secret {{ {:?} }}", self.key)
+            .replace("[", "")
+            .replace("]", "");
 
-            write!(f, "{}", output)
-        } else {
-            let output = format!("Secret {{ {:?} }}", self.key)
-                .replace("[", "")
-                .replace("]", "");
-
-            write!(f, "{}", output)
-        }
+        write!(f, "{}", output)
     }
 }
 
