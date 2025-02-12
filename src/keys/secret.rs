@@ -6,11 +6,7 @@ use rayon::prelude::*;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::keys::public::Public;
-use crate::keys::{
-    modulus,
-    DecryptError::{self, ByteParseError, SliceAccessError, U32ParseError},
-    MAX_CHR,
-};
+use crate::keys::{modulus, DecryptError::{self, ByteParseError, SliceAccessError, U32ParseError}, _decrypt, MAX_CHR};
 
 #[derive(IntoBytes, FromBytes, Immutable)]
 pub struct Secret16 {
@@ -67,30 +63,7 @@ impl Secret16 {
     }
 
     pub fn decrypt(&self, message: &[u8]) -> Result<String, DecryptError> {
-        if message.is_empty() {
-            return Ok(String::new());
-        }
-
-        let message: &[i32] = FromBytes::ref_from_bytes(message).map_err(|_| ByteParseError)?;
-        let add = self.add as f32;
-
-        Ok(message
-            .par_chunks(self.key.len() + 1)
-            .map(|message_chunk| {
-                let chr_answer: i32 = self
-                    .key
-                    .iter()
-                    .zip(message_chunk)
-                    .map(|(num, chunklet)| num * chunklet)
-                    .sum();
-
-                let last = message_chunk.last().ok_or_else(|| SliceAccessError)?;
-                Ok(
-                    from_u32((modulus(last - chr_answer, self.modulo) as f32 / add).round() as u32)
-                        .ok_or_else(|| U32ParseError)?,
-                )
-            })
-            .collect::<Result<String, DecryptError>>()?)
+        _decrypt(&message, &self.key, self.add, self.modulo)
     }
 }
 
